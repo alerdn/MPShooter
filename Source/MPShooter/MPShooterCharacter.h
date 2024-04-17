@@ -5,8 +5,12 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Net/UnrealNetwork.h"
 #include "MPShooterCharacter.generated.h"
 
+class AGun;
+class UHealthComponent;
+class UInputAction;
 
 UCLASS(config=Game)
 class AMPShooterCharacter : public ACharacter
@@ -27,20 +31,25 @@ class AMPShooterCharacter : public ACharacter
 
 	/** Jump Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* JumpAction;
+	UInputAction* JumpAction;
 
 	/** Move Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* MoveAction;
+	UInputAction* MoveAction;
 
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* LookAction;
+	UInputAction* LookAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ShootAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RunAction;
 
 public:
 	AMPShooterCharacter();
 	
-
 protected:
 
 	/** Called for movement input */
@@ -48,7 +57,9 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-			
+
+	void Shoot();
+	void Run(const FInputActionValue& Value);			
 
 protected:
 	// APawn interface
@@ -58,9 +69,33 @@ protected:
 	virtual void BeginPlay();
 
 public:
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	UHealthComponent* HealthComp;
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+private:
+	UPROPERTY(EditAnywhere)
+	float MaxRunSpeed;
+	float OriginalMaxWalkSpeed;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<AGun> GunClass;
+
+	UPROPERTY()
+	AGun* Gun;
+
+	void ToggleWalkSpeed(bool bRunning);
+
+	UFUNCTION(Server, Unreliable)
+	void ServerRPCToggleWalkSpeed(bool bRunning);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPCShoot();
 };
 

@@ -9,7 +9,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-
+#include "Gun.h"
+#include "HealthComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterCharacter
@@ -18,14 +19,14 @@ AMPShooterCharacter::AMPShooterCharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-		
+
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	GetCharacterMovement()->bOrientRotationToMovement = true;			 // Character moves in the direction of input...
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
 
 	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
@@ -39,56 +40,71 @@ AMPShooterCharacter::AMPShooterCharacter()
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
+	CameraBoom->TargetArmLength = 400.0f;		// The camera follows at this distance behind the character
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
-	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	FollowCamera->bUsePawnControlRotation = false;								// Camera does not rotate relative to arm
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
+	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character)
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	HealthComp = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
+
+	MaxRunSpeed = 1500.f;
+	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 }
 
 void AMPShooterCharacter::BeginPlay()
 {
-	// Call the base class  
+	// Call the base class
 	Super::BeginPlay();
 
-	//Add Input Mapping Context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	// Add Input Mapping Context
+	if (APlayerController *PlayerController = Cast<APlayerController>(Controller))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem *Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	Gun = GetWorld()->SpawnActor<AGun>(GunClass);
+	Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
+	Gun->SetOwner(this);
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Input
 
-void AMPShooterCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
+void AMPShooterCharacter::SetupPlayerInputComponent(class UInputComponent *PlayerInputComponent)
 {
 	// Set up action bindings
-	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
-		
-		//Jumping
+	if (UEnhancedInputComponent *EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+
+		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
-		//Moving
+		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMPShooterCharacter::Move);
 
-		//Looking
+		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMPShooterCharacter::Look);
 
-	}
+		// Shoot
+		EnhancedInputComponent->BindAction(ShootAction, ETriggerEvent::Triggered, this, &AMPShooterCharacter::Shoot);
 
+		// Run
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &AMPShooterCharacter::Run);
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMPShooterCharacter::Run);
+	}
 }
 
-void AMPShooterCharacter::Move(const FInputActionValue& Value)
+void AMPShooterCharacter::Move(const FInputActionValue &Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
@@ -101,17 +117,17 @@ void AMPShooterCharacter::Move(const FInputActionValue& Value)
 
 		// get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	
-		// get right vector 
+
+		// get right vector
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-		// add movement 
+		// add movement
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
 
-void AMPShooterCharacter::Look(const FInputActionValue& Value)
+void AMPShooterCharacter::Look(const FInputActionValue &Value)
 {
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
@@ -124,6 +140,56 @@ void AMPShooterCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void AMPShooterCharacter::Shoot()
+{
+	if (HasAuthority())
+	{
+		Gun->Shoot();
+	}
+	else
+	{
+		ServerRPCShoot();
+	}
+}
 
+void AMPShooterCharacter::ServerRPCShoot_Implementation()
+{
+	Gun->Shoot();
+}
 
+void AMPShooterCharacter::Run(const FInputActionValue &Value)
+{
+	bool bRunning = Value.Get<bool>();
+	if (HasAuthority())
+	{
+		ToggleWalkSpeed(bRunning);
+	}
+	else
+	{
+		ServerRPCToggleWalkSpeed(bRunning);
+	}
+}
 
+void AMPShooterCharacter::ToggleWalkSpeed(bool bRunning)
+{
+	if (bRunning)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = MaxRunSpeed;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+	}
+}
+
+void AMPShooterCharacter::ServerRPCToggleWalkSpeed_Implementation(bool bRunning)
+{
+	ToggleWalkSpeed(bRunning);
+}
+
+float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	return HealthComp->DamageTaken(this, DamageAmount, DamageCauser);
+}
