@@ -2,6 +2,8 @@
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "MPShooterCharacter.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerStart.h"
 
 UHealthComponent::UHealthComponent()
 {
@@ -23,7 +25,7 @@ void UHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
-void UHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const 
+void UHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
@@ -37,8 +39,7 @@ bool UHealthComponent::IsDead() const
 
 float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AActor *DamageCauser)
 {
-	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s recebeu dano de %s"), *DamagedActor->GetActorNameOrLabel(), *DamageCauser->GetActorNameOrLabel()));
-	if (Damage <= 0.f)
+	if (Damage <= 0.f || IsDead())
 	{
 		return 0.f;
 	}
@@ -48,21 +49,23 @@ float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AActor *
 
 	if (IsDead())
 	{
-		
-		// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s morto por %s"), *DamagedActor->GetActorNameOrLabel(), *DamageCauser->GetActorNameOrLabel()));
-		AMPShooterCharacter* MyOwner = Cast<AMPShooterCharacter>(GetOwner());
-		MyOwner->GetController()->SetIgnoreMoveInput(true);
-
+		AMPShooterCharacter *MyOwner = Cast<AMPShooterCharacter>(GetOwner());
+		if (MyOwner->HasAuthority())
+		{
+			MyOwner->ClientRPCDisableInputs();
+		}
 		MyOwner->GetWorldTimerManager().SetTimer(ReviveTimer, this, &UHealthComponent::Revive, 5.f);
 	}
 
 	return DamageToApply;
 }
 
-
 void UHealthComponent::Revive()
 {
-	AMPShooterCharacter* MyOwner = Cast<AMPShooterCharacter>(GetOwner());
-	MyOwner->GetController()->SetIgnoreMoveInput(false);
+	AMPShooterCharacter *MyOwner = Cast<AMPShooterCharacter>(GetOwner());
+	if (MyOwner->HasAuthority())
+	{
+		MyOwner->ClientRPCEnableInputs();
+	}
 	Health = MaxHealth;
 }

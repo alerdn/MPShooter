@@ -11,6 +11,8 @@ AGun::AGun()
 
 	Damage = 20.f;
 	MaxRange = 1500.f;
+	FireRate = .1f;
+	bCanFire = true;
 }
 
 void AGun::BeginPlay()
@@ -25,6 +27,12 @@ void AGun::Tick(float DeltaTime)
 
 void AGun::Shoot()
 {
+	if (!bCanFire)
+	{
+		return;
+	}
+	bCanFire = false;
+
 	AMPShooterCharacter *MyOwner = Cast<AMPShooterCharacter>(GetOwner());
 	if (!MyOwner)
 	{
@@ -47,8 +55,7 @@ void AGun::Shoot()
 		AActor *HitActor = HitResult.GetActor();
 		if (HitActor)
 		{
-			// UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Impact, HitResult.ImpactPoint, ShotDirection.Rotation());
-			// UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, HitResult.ImpactPoint);
+			MulticastRPCSpawnSoundAndParticles(HitResult.ImpactPoint, ShotDirection);
 
 			FString who = HasAuthority() ? "servidor" : "cliente";
 
@@ -59,6 +66,8 @@ void AGun::Shoot()
 			}
 		}
 	}
+	
+	GetWorldTimerManager().SetTimer(ShootCooldown, this, &AGun::AllowFire, FireRate);
 }
 
 bool AGun::GunTrace(FHitResult &HitResult, const AController *Controller, FVector& ShotDirection)
@@ -74,4 +83,15 @@ bool AGun::GunTrace(FHitResult &HitResult, const AController *Controller, FVecto
 	Params.AddIgnoredActor(Owner);
 
 	return GetWorld()->LineTraceSingleByChannel(HitResult, VPLocation, End, ECC_GameTraceChannel1, Params);
+}
+
+void AGun::MulticastRPCSpawnSoundAndParticles_Implementation(FVector ImpactPoint, FVector ShotDirection)
+{
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Impact, ImpactPoint, ShotDirection.Rotation());
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, ImpactPoint);
+}
+
+void AGun::AllowFire()
+{
+	bCanFire = true;
 }

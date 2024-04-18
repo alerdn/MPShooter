@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Gun.h"
 #include "HealthComponent.h"
+#include "MPShooterGameMode.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterCharacter
@@ -187,9 +188,27 @@ void AMPShooterCharacter::ServerRPCToggleWalkSpeed_Implementation(bool bRunning)
 	ToggleWalkSpeed(bRunning);
 }
 
-float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const &DamageEvent, class AController *EventInstigator, AActor *DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	return HealthComp->DamageTaken(this, DamageAmount, DamageCauser);
+}
+
+void AMPShooterCharacter::ClientRPCEnableInputs_Implementation()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		PlayerController->SetInputMode(FInputModeGameOnly());
+	}
+}
+
+void AMPShooterCharacter::ClientRPCDisableInputs_Implementation()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		PlayerController->SetInputMode(FInputModeUIOnly());
+	}
 }

@@ -21,10 +21,17 @@ public:
 	void Shoot();
 
 private:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Combat")
 	float Damage;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Combat")
 	float MaxRange;
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	float FireRate;
+
+	FTimerHandle ShootCooldown;
+	bool bCanFire;
+
+	void AllowFire();
 
 	UPROPERTY(EditAnywhere)
 	USoundBase* ImpactSound;
@@ -33,5 +40,8 @@ private:
 	UParticleSystem* Impact;
 
 	bool GunTrace(FHitResult& HitResult, const AController *Controller,  FVector& ShotDirection);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastRPCSpawnSoundAndParticles(FVector ImpactPoint, FVector ShotDirection);
 
 };
