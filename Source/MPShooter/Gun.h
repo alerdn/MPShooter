@@ -4,6 +4,8 @@
 #include "GameFramework/Actor.h"
 #include "Gun.generated.h"
 
+class UArrowComponent;
+
 UCLASS()
 class MPSHOOTER_API AGun : public AActor
 {
@@ -21,8 +23,15 @@ public:
 	void Shoot();
 
 private:
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* RootComp;
+	UPROPERTY(VisibleAnywhere)
+	UArrowComponent* MuzzlePoint;
+
 	UPROPERTY(EditAnywhere, Category = "Combat")
-	float Damage;
+	float DamageBase;
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	float DamageVariation;
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	float MaxRange;
 	UPROPERTY(EditAnywhere, Category = "Combat")
@@ -34,6 +43,12 @@ private:
 	void AllowFire();
 
 	UPROPERTY(EditAnywhere)
+	UParticleSystem* MuzzleFlash;
+	
+	UPROPERTY(EditAnywhere)
+	USoundBase* MuzzleSound;
+
+	UPROPERTY(EditAnywhere)
 	USoundBase* ImpactSound;
 
 	UPROPERTY(EditAnywhere)
@@ -43,5 +58,8 @@ private:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastRPCSpawnSoundAndParticles(FVector ImpactPoint, FVector ShotDirection);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastRPCSpawnMuzzleSoundAndParticles();
 
 };

@@ -114,7 +114,8 @@ void AMPShooterCharacter::Respawn()
 		ASpawnPoint* SpawnPoint = Cast<ASpawnPoint>(SpawnPoints[spawnIndex]);
 		if (SpawnPoint)
 		{
-			SetActorLocation(SpawnPoint->GetSpawnLocation());
+			FVector Variation(FMath::RandRange(0.f, 50.f), 0.f, FMath::RandRange(0.f, 50.f));
+			SetActorLocation(SpawnPoint->GetSpawnLocation() + Variation);
 		}
 	}
 }

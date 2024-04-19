@@ -2,6 +2,7 @@
 #include "MPShooterCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/DamageEvents.h"
+#include "Components/ArrowComponent.h"
 
 AGun::AGun()
 {
@@ -9,7 +10,14 @@ AGun::AGun()
 
 	bReplicates = true;
 
-	Damage = 20.f;
+	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("RootComp"));
+	SetRootComponent(RootComp);
+
+	MuzzlePoint = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzlePoint"));
+	MuzzlePoint->SetupAttachment(RootComp);
+
+	DamageBase = 10.f;
+	DamageVariation = 10.f;
 	MaxRange = 1500.f;
 	FireRate = .1f;
 	bCanFire = true;
@@ -44,8 +52,8 @@ void AGun::Shoot()
 	{
 		return;
 	}
- 
-	// TODO: Play sounds and emit effects
+
+	MulticastRPCSpawnMuzzleSoundAndParticles();
 
 	FVector ShotDirection;
 	FHitResult HitResult;
@@ -57,20 +65,19 @@ void AGun::Shoot()
 		{
 			MulticastRPCSpawnSoundAndParticles(HitResult.ImpactPoint, ShotDirection);
 
-			FString who = HasAuthority() ? "servidor" : "cliente";
-
 			if (HitActor)
 			{
+				float Damage = DamageBase + FMath::RandRange(0.f, DamageVariation);
 				FPointDamageEvent DamageEvent(Damage, HitResult, ShotDirection, nullptr);
 				HitActor->TakeDamage(Damage, DamageEvent, Controller, this);
 			}
 		}
 	}
-	
+
 	GetWorldTimerManager().SetTimer(ShootCooldown, this, &AGun::AllowFire, FireRate);
 }
 
-bool AGun::GunTrace(FHitResult &HitResult, const AController *Controller, FVector& ShotDirection)
+bool AGun::GunTrace(FHitResult &HitResult, const AController *Controller, FVector &ShotDirection)
 {
 	FVector VPLocation;
 	FRotator VPRotation;
@@ -85,13 +92,19 @@ bool AGun::GunTrace(FHitResult &HitResult, const AController *Controller, FVecto
 	return GetWorld()->LineTraceSingleByChannel(HitResult, VPLocation, End, ECC_GameTraceChannel1, Params);
 }
 
+void AGun::AllowFire()
+{
+	bCanFire = true;
+}
+
 void AGun::MulticastRPCSpawnSoundAndParticles_Implementation(FVector ImpactPoint, FVector ShotDirection)
 {
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Impact, ImpactPoint, ShotDirection.Rotation());
 	UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, ImpactPoint);
 }
 
-void AGun::AllowFire()
+void AGun::MulticastRPCSpawnMuzzleSoundAndParticles_Implementation()
 {
-	bCanFire = true;
+	UGameplayStatics::SpawnEmitterAttached(MuzzleFlash, MuzzlePoint);
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), MuzzleSound, GetActorLocation());
 }
