@@ -12,6 +12,9 @@
 #include "Gun.h"
 #include "HealthComponent.h"
 #include "MPShooterGameMode.h"
+#include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
+#include "SpawnPoint.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterCharacter
@@ -54,14 +57,24 @@ AMPShooterCharacter::AMPShooterCharacter()
 
 	HealthComp = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
 
+	// Speeds
 	MaxRunSpeed = 1500.f;
 	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	MaxAimingWalkSpeed = OriginalMaxWalkSpeed * .4f;
+	MaxAimingRunSpeed = MaxRunSpeed * .4f;
+
+	// Aim
+	AimInterpSpeed = 3500.f;
+	AimArmLength = 80.f;
+	OriginalArmLength = CameraBoom->TargetArmLength;
 }
 
 void AMPShooterCharacter::BeginPlay()
 {
 	// Call the base class
 	Super::BeginPlay();
+
+	Respawn();
 
 	// Add Input Mapping Context
 	if (APlayerController *PlayerController = Cast<APlayerController>(Controller))
@@ -77,6 +90,34 @@ void AMPShooterCharacter::BeginPlay()
 	Gun->SetOwner(this);
 }
 
+void AMPShooterCharacter::Tick(float DeltaTime)
+{
+	HandleSpeed();
+	HandleAim(DeltaTime);
+}
+
+void AMPShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMPShooterCharacter, bRunning);
+	DOREPLIFETIME(AMPShooterCharacter, bAiming);
+}
+
+void AMPShooterCharacter::Respawn()
+{
+	TArray<AActor*> SpawnPoints;
+	UGameplayStatics::GetAllActorsOfClass(this, ASpawnPoint::StaticClass(), SpawnPoints);
+	if (SpawnPoints.Num() > 0)
+	{
+		int spawnIndex = FMath::RandRange(0, SpawnPoints.Num() - 1);
+		ASpawnPoint* SpawnPoint = Cast<ASpawnPoint>(SpawnPoints[spawnIndex]);
+		if (SpawnPoint)
+		{
+			SetActorLocation(SpawnPoint->GetSpawnLocation());
+		}
+	}
+}
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -102,6 +143,10 @@ void AMPShooterCharacter::SetupPlayerInputComponent(class UInputComponent *Playe
 		// Run
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &AMPShooterCharacter::Run);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMPShooterCharacter::Run);
+		
+		// Aim
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AMPShooterCharacter::Aim);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AMPShooterCharacter::Aim);
 	}
 }
 
@@ -160,32 +205,38 @@ void AMPShooterCharacter::ServerRPCShoot_Implementation()
 
 void AMPShooterCharacter::Run(const FInputActionValue &Value)
 {
-	bool bRunning = Value.Get<bool>();
-	if (HasAuthority())
-	{
-		ToggleWalkSpeed(bRunning);
-	}
-	else
-	{
-		ServerRPCToggleWalkSpeed(bRunning);
-	}
+	bRunning = Value.Get<bool>();
 }
 
-void AMPShooterCharacter::ToggleWalkSpeed(bool bRunning)
+void AMPShooterCharacter::Aim(const FInputActionValue &Value)
+{
+	bAiming = Value.Get<bool>();
+}
+
+void AMPShooterCharacter::HandleSpeed()
 {
 	if (bRunning)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = MaxRunSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = bAiming ? MaxAimingRunSpeed : MaxRunSpeed;
 	}
 	else
 	{
-		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = bAiming ? MaxAimingWalkSpeed : OriginalMaxWalkSpeed;
 	}
 }
 
-void AMPShooterCharacter::ServerRPCToggleWalkSpeed_Implementation(bool bRunning)
+void AMPShooterCharacter::HandleAim(float DeltaTime)
 {
-	ToggleWalkSpeed(bRunning);
+	if (bAiming)
+	{
+		float ArmLength = FMath::FInterpConstantTo(CameraBoom->TargetArmLength, AimArmLength, DeltaTime, AimInterpSpeed);
+		CameraBoom->TargetArmLength = ArmLength;
+	}
+	else 
+	{
+		float ArmLength = FMath::FInterpConstantTo(CameraBoom->TargetArmLength, OriginalArmLength, DeltaTime, AimInterpSpeed);
+		CameraBoom->TargetArmLength = ArmLength;
+	}
 }
 
 float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const &DamageEvent, class AController *EventInstigator, AActor *DamageCauser)

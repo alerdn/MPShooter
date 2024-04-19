@@ -47,6 +47,9 @@ class AMPShooterCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RunAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AimAction;
+
 public:
 	AMPShooterCharacter();
 	
@@ -60,6 +63,7 @@ protected:
 
 	void Shoot();
 	void Run(const FInputActionValue& Value);			
+	void Aim(const FInputActionValue& Value);			
 
 protected:
 	// APawn interface
@@ -72,7 +76,12 @@ public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	UHealthComponent* HealthComp;
 
+	virtual void Tick(float DeltaTime) override;
+
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void Respawn();
 
 	UFUNCTION(Client, Reliable)
 	void ClientRPCEnableInputs();
@@ -87,6 +96,11 @@ public:
 private:
 	UPROPERTY(EditAnywhere)
 	float MaxRunSpeed;
+	UPROPERTY(EditAnywhere)
+	float MaxAimingWalkSpeed;
+	UPROPERTY(EditAnywhere)
+	float MaxAimingRunSpeed;
+
 	float OriginalMaxWalkSpeed;
 
 	UPROPERTY(EditDefaultsOnly)
@@ -95,10 +109,20 @@ private:
 	UPROPERTY()
 	AGun* Gun;
 
-	void ToggleWalkSpeed(bool bRunning);
+	UPROPERTY(Replicated)
+	bool bRunning;
+	UPROPERTY(Replicated)
+	bool bAiming;
 
-	UFUNCTION(Server, Unreliable)
-	void ServerRPCToggleWalkSpeed(bool bRunning);
+	UPROPERTY(EditAnywhere)
+	float AimInterpSpeed;
+	UPROPERTY(EditAnywhere)
+	float AimArmLength;
+
+	float OriginalArmLength;
+
+	void HandleSpeed();
+	void HandleAim(float DeltaTime);
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPCShoot();

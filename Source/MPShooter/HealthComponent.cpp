@@ -67,5 +67,7 @@ void UHealthComponent::Revive()
 	{
 		MyOwner->ClientRPCEnableInputs();
 	}
+
 	Health = MaxHealth;
+	MyOwner->Respawn();
 }
