@@ -92,26 +92,26 @@ void AMPShooterCharacter::BeginPlay()
 
 void AMPShooterCharacter::Tick(float DeltaTime)
 {
-	HandleSpeed();
-	HandleAim(DeltaTime);
+	// HandleSpeed();
+	// HandleAim(DeltaTime);
 }
 
-void AMPShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+// void AMPShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+// {
+// 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AMPShooterCharacter, bRunning);
-	DOREPLIFETIME(AMPShooterCharacter, bAiming);
-}
+// 	DOREPLIFETIME(AMPShooterCharacter, bRunning);
+// 	DOREPLIFETIME(AMPShooterCharacter, bAiming);
+// }
 
 void AMPShooterCharacter::Respawn()
 {
-	TArray<AActor*> SpawnPoints;
+	TArray<AActor *> SpawnPoints;
 	UGameplayStatics::GetAllActorsOfClass(this, ASpawnPoint::StaticClass(), SpawnPoints);
 	if (SpawnPoints.Num() > 0)
 	{
 		int spawnIndex = FMath::RandRange(0, SpawnPoints.Num() - 1);
-		ASpawnPoint* SpawnPoint = Cast<ASpawnPoint>(SpawnPoints[spawnIndex]);
+		ASpawnPoint *SpawnPoint = Cast<ASpawnPoint>(SpawnPoints[spawnIndex]);
 		if (SpawnPoint)
 		{
 			FVector Variation(FMath::RandRange(0.f, 50.f), 0.f, FMath::RandRange(0.f, 50.f));
@@ -144,7 +144,7 @@ void AMPShooterCharacter::SetupPlayerInputComponent(class UInputComponent *Playe
 		// Run
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &AMPShooterCharacter::Run);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMPShooterCharacter::Run);
-		
+
 		// Aim
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AMPShooterCharacter::Aim);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AMPShooterCharacter::Aim);
@@ -207,35 +207,82 @@ void AMPShooterCharacter::ServerRPCShoot_Implementation()
 void AMPShooterCharacter::Run(const FInputActionValue &Value)
 {
 	bRunning = Value.Get<bool>();
+	if (HasAuthority())
+	{
+		HandleSpeed(bRunning);
+	}
+	else
+	{
+		ServerRPCHandleSpeed(bRunning);
+	}
+}
+
+void AMPShooterCharacter::HandleSpeed(bool isRunning)
+{
+	if (isRunning)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = MaxRunSpeed;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+	}
+}
+
+void AMPShooterCharacter::ServerRPCHandleSpeed_Implementation(bool isRunning)
+{
+	if (isRunning)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = MaxRunSpeed;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+	}
 }
 
 void AMPShooterCharacter::Aim(const FInputActionValue &Value)
 {
 	bAiming = Value.Get<bool>();
-}
-
-void AMPShooterCharacter::HandleSpeed()
-{
-	if (bRunning)
+	if (HasAuthority())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = bAiming ? MaxAimingRunSpeed : MaxRunSpeed;
+		HandleAim(bAiming);
 	}
 	else
 	{
-		GetCharacterMovement()->MaxWalkSpeed = bAiming ? MaxAimingWalkSpeed : OriginalMaxWalkSpeed;
+		ServerRPCHandleAim(bAiming);
 	}
 }
 
-void AMPShooterCharacter::HandleAim(float DeltaTime)
+void AMPShooterCharacter::HandleAim(bool isAiming)
 {
-	if (bAiming)
+	if (isAiming)
 	{
-		float ArmLength = FMath::FInterpConstantTo(CameraBoom->TargetArmLength, AimArmLength, DeltaTime, AimInterpSpeed);
+		float ArmLength = AimArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, AimArmLength, DeltaTime, AimInterpSpeed);
 		CameraBoom->TargetArmLength = ArmLength;
 	}
 	else 
 	{
-		float ArmLength = FMath::FInterpConstantTo(CameraBoom->TargetArmLength, OriginalArmLength, DeltaTime, AimInterpSpeed);
+		float ArmLength = OriginalArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, OriginalArmLength, DeltaTime, AimInterpSpeed);
+		CameraBoom->TargetArmLength = ArmLength;
+	}
+}
+
+void AMPShooterCharacter::ServerRPCHandleAim_Implementation(bool isAiming)
+{
+	ClientRPCHandleAim(isAiming);
+}
+
+void AMPShooterCharacter::ClientRPCHandleAim_Implementation(bool isAiming)
+{
+	if (isAiming)
+	{
+		float ArmLength = AimArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, AimArmLength, DeltaTime, AimInterpSpeed);
+		CameraBoom->TargetArmLength = AimArmLength;
+	}
+	else 
+	{
+		float ArmLength = OriginalArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, OriginalArmLength, DeltaTime, AimInterpSpeed);
 		CameraBoom->TargetArmLength = ArmLength;
 	}
 }
@@ -249,7 +296,7 @@ float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent co
 
 void AMPShooterCharacter::ClientRPCEnableInputs_Implementation()
 {
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	APlayerController *PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController)
 	{
 		PlayerController->SetInputMode(FInputModeGameOnly());
@@ -258,7 +305,7 @@ void AMPShooterCharacter::ClientRPCEnableInputs_Implementation()
 
 void AMPShooterCharacter::ClientRPCDisableInputs_Implementation()
 {
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	APlayerController *PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController)
 	{
 		PlayerController->SetInputMode(FInputModeUIOnly());
