@@ -30,8 +30,7 @@ AMPShooterCharacter::AMPShooterCharacter()
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true;			 // Character moves in the direction of input...
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
+	GetCharacterMovement()->bOrientRotationToMovement = false;
 
 	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
 	// instead of recompiling to adjust them
@@ -92,17 +91,15 @@ void AMPShooterCharacter::BeginPlay()
 
 void AMPShooterCharacter::Tick(float DeltaTime)
 {
-	// HandleSpeed();
-	// HandleAim(DeltaTime);
+	HandleAim(DeltaTime);
 }
 
-// void AMPShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
-// {
-// 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+void AMPShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-// 	DOREPLIFETIME(AMPShooterCharacter, bRunning);
-// 	DOREPLIFETIME(AMPShooterCharacter, bAiming);
-// }
+	DOREPLIFETIME(AMPShooterCharacter, bAiming);
+}
 
 void AMPShooterCharacter::Respawn()
 {
@@ -206,85 +203,51 @@ void AMPShooterCharacter::ServerRPCShoot_Implementation()
 
 void AMPShooterCharacter::Run(const FInputActionValue &Value)
 {
-	bRunning = Value.Get<bool>();
+	bool IsRunning = Value.Get<bool>();
+	float CurrentSpeed = IsRunning ? MaxRunSpeed : OriginalMaxWalkSpeed;
 	if (HasAuthority())
 	{
-		HandleSpeed(bRunning);
+		GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
 	}
 	else
 	{
-		ServerRPCHandleSpeed(bRunning);
+		ServerRPCHandleWalkSpeed(CurrentSpeed);
 	}
 }
 
-void AMPShooterCharacter::HandleSpeed(bool isRunning)
+void AMPShooterCharacter::ServerRPCHandleWalkSpeed_Implementation(float CurrentSpeed)
 {
-	if (isRunning)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = MaxRunSpeed;
-	}
-	else
-	{
-		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
-	}
-}
-
-void AMPShooterCharacter::ServerRPCHandleSpeed_Implementation(bool isRunning)
-{
-	if (isRunning)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = MaxRunSpeed;
-	}
-	else
-	{
-		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
-	}
+	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
 }
 
 void AMPShooterCharacter::Aim(const FInputActionValue &Value)
 {
-	bAiming = Value.Get<bool>();
+	bool IsAiming = Value.Get<bool>();
 	if (HasAuthority())
 	{
-		HandleAim(bAiming);
+		bAiming = IsAiming;
 	}
 	else
 	{
-		ServerRPCHandleAim(bAiming);
+		ServerRPCHandleIsAiming(IsAiming);
 	}
 }
 
-void AMPShooterCharacter::HandleAim(bool isAiming)
+void AMPShooterCharacter::ServerRPCHandleIsAiming_Implementation(bool IsAiming)
 {
-	if (isAiming)
-	{
-		float ArmLength = AimArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, AimArmLength, DeltaTime, AimInterpSpeed);
-		CameraBoom->TargetArmLength = ArmLength;
-	}
-	else 
-	{
-		float ArmLength = OriginalArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, OriginalArmLength, DeltaTime, AimInterpSpeed);
-		CameraBoom->TargetArmLength = ArmLength;
-	}
+	bAiming = IsAiming;
 }
 
-void AMPShooterCharacter::ServerRPCHandleAim_Implementation(bool isAiming)
+void AMPShooterCharacter::HandleAim(float DeltaTime)
 {
-	ClientRPCHandleAim(isAiming);
-}
-
-void AMPShooterCharacter::ClientRPCHandleAim_Implementation(bool isAiming)
-{
-	if (isAiming)
-	{
-		float ArmLength = AimArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, AimArmLength, DeltaTime, AimInterpSpeed);
-		CameraBoom->TargetArmLength = AimArmLength;
-	}
-	else 
-	{
-		float ArmLength = OriginalArmLength;// FMath::FInterpConstantTo(CameraBoom->TargetArmLength, OriginalArmLength, DeltaTime, AimInterpSpeed);
-		CameraBoom->TargetArmLength = ArmLength;
-	}
+	FString Who = HasAuthority() ? "server" : "client";
+	FString Aiming = bAiming ? "is" : "is not";
+	GEngine->AddOnScreenDebugMessage(-1, .01f, FColor::Green, FString::Printf(TEXT("%s %s aiming"), *Who, *Aiming));
+	
+	float TargetArmLength = bAiming ? AimArmLength : OriginalArmLength;
+		
+	float ArmLength = FMath::FInterpConstantTo(CameraBoom->TargetArmLength, TargetArmLength, DeltaTime, AimInterpSpeed);
+	CameraBoom->TargetArmLength = ArmLength;
 }
 
 float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const &DamageEvent, class AController *EventInstigator, AActor *DamageCauser)

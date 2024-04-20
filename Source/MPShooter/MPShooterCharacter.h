@@ -79,7 +79,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-	// virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void Respawn();
 
@@ -109,7 +109,7 @@ private:
 	UPROPERTY()
 	AGun* Gun;
 
-	bool bRunning;
+	UPROPERTY(Replicated)
 	bool bAiming;
 
 	UPROPERTY(EditAnywhere)
@@ -119,18 +119,15 @@ private:
 
 	float OriginalArmLength;
 
-	void HandleSpeed(bool bRunning);
-	void HandleAim(bool bAiming);
+	void HandleAim(float DeltaTime);
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPCShoot();
 
 	UFUNCTION(Server, Unreliable)
-	void ServerRPCHandleSpeed(bool isRunning);
+	void ServerRPCHandleWalkSpeed(float CurrentSpeed);
 	UFUNCTION(Server, Unreliable)
-	void ServerRPCHandleAim(bool isAiming);
-	UFUNCTION(Client, Unreliable)
-	void ClientRPCHandleAim(bool isAiming);
+	void ServerRPCHandleIsAiming(bool IsAiming);
 
 };
 
