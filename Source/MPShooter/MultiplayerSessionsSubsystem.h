@@ -24,6 +24,8 @@ public:
 	void CreateServer(FString ServerName);
 	UFUNCTION(BlueprintCallable)
 	void FindServer(FString ServerName);
+	UFUNCTION(BlueprintCallable)
+	void DestroySession();
 
 	UFUNCTION(BlueprintPure)
 	FString GetMapPath() const { return MapPath; }

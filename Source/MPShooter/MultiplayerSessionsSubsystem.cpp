@@ -35,7 +35,7 @@ void UMultiplayerSessionsSubsystem::Initialize(FSubsystemCollectionBase &Collect
             SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UMultiplayerSessionsSubsystem::OnDestroySessionComplete);
             SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UMultiplayerSessionsSubsystem::OnFindSessionsComplete);
             SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UMultiplayerSessionsSubsystem::OnJoinSessionComplete);
-        }
+        }        
     }
 }
 
@@ -103,12 +103,17 @@ void UMultiplayerSessionsSubsystem::FindServer(FString ServerName)
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
+void UMultiplayerSessionsSubsystem::DestroySession()
+{
+    SessionInterface->DestroySession(MySessionName);
+}
+
 void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
     ServerCreateDelegate.Broadcast(bWasSuccessful);
 
     if (bWasSuccessful)
-    {        
+    {
         if (MapPath.IsEmpty())
         {
             PrintString("Nenhum mapa selecionado.");
@@ -187,12 +192,12 @@ void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOn
     if (bWasSuccessful)
     {
         PrintString(FString::Printf(TEXT("Entrou com sucesso na sessão %s"), *SessionName.ToString()));
-        
+
         FString Address = "";
         bool Success = SessionInterface->GetResolvedConnectString(SessionName, Address);
-        if(Success)
+        if (Success)
         {
-            APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
+            APlayerController *PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
             if (PlayerController)
             {
                 PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);

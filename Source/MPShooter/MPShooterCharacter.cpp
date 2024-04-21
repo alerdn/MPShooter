@@ -240,10 +240,6 @@ void AMPShooterCharacter::ServerRPCHandleIsAiming_Implementation(bool IsAiming)
 
 void AMPShooterCharacter::HandleAim(float DeltaTime)
 {
-	FString Who = HasAuthority() ? "server" : "client";
-	FString Aiming = bAiming ? "is" : "is not";
-	GEngine->AddOnScreenDebugMessage(-1, .01f, FColor::Green, FString::Printf(TEXT("%s %s aiming"), *Who, *Aiming));
-	
 	float TargetArmLength = bAiming ? AimArmLength : OriginalArmLength;
 		
 	float ArmLength = FMath::FInterpConstantTo(CameraBoom->TargetArmLength, TargetArmLength, DeltaTime, AimInterpSpeed);
