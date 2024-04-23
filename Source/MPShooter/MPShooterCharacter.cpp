@@ -15,6 +15,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "SpawnPoint.h"
+#include "MPShooterGameInstance.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterCharacter
@@ -87,6 +88,12 @@ void AMPShooterCharacter::BeginPlay()
 	Gun = GetWorld()->SpawnActor<AGun>(GunClass);
 	Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
 	Gun->SetOwner(this);
+
+	UMPShooterGameInstance* GameInstance = Cast<UMPShooterGameInstance>(GetGameInstance());
+	if (GameInstance)
+	{
+		PlayerName = GameInstance->GetPlayerName();
+	}
 }
 
 void AMPShooterCharacter::Tick(float DeltaTime)

@@ -83,6 +83,11 @@ public:
 
 	void Respawn();
 
+	UFUNCTION(BlueprintCallable)
+	FString GetPlayerName() { return PlayerName; }
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerName(FString NewPlayerName) { PlayerName = NewPlayerName; }
+
 	UFUNCTION(Client, Reliable)
 	void ClientRPCEnableInputs();
 	UFUNCTION(Client, Reliable)
@@ -94,6 +99,9 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
+	UPROPERTY(Replicated)
+	FString PlayerName;
+
 	UPROPERTY(EditAnywhere)
 	float MaxRunSpeed;
 	UPROPERTY(EditAnywhere)
