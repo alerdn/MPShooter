@@ -2,8 +2,7 @@
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "MPShooterCharacter.h"
-#include "Kismet/GameplayStatics.h"
-#include "GameFramework/PlayerStart.h"
+#include "Gun.h"
 
 UHealthComponent::UHealthComponent()
 {
@@ -37,7 +36,7 @@ bool UHealthComponent::IsDead() const
 	return Health == 0;
 }
 
-float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AActor *DamageCauser)
+float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AController* KillerController, AActor *Weapon)
 {
 	if (Damage <= 0.f || IsDead())
 	{
@@ -49,10 +48,13 @@ float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AActor *
 
 	if (IsDead())
 	{
-		AMPShooterCharacter *MyOwner = Cast<AMPShooterCharacter>(GetOwner());
+		AMPShooterCharacter *MyOwner = Cast<AMPShooterCharacter>(DamagedActor); 
+		AMPShooterCharacter* Killer = Cast<AMPShooterCharacter>(KillerController->GetPawn());
+		AGun* Gun = Cast<AGun>(Weapon);
 		if (MyOwner->HasAuthority())
 		{
 			MyOwner->ClientRPCDisableInputs();
+			MyOwner->OnDead.Broadcast(Killer, Gun);
 		}
 		MyOwner->GetWorldTimerManager().SetTimer(ReviveTimer, this, &UHealthComponent::Revive, 5.f);
 	}

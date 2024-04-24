@@ -12,6 +12,8 @@ class AGun;
 class UHealthComponent;
 class UInputAction;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMPShooterCharacterOnDead, AMPShooterCharacter*, Killer, AGun*, Weapon);
+
 UCLASS(config=Game)
 class AMPShooterCharacter : public ACharacter
 {
@@ -73,17 +75,20 @@ protected:
 	virtual void BeginPlay();
 
 public:
+	UPROPERTY(BlueprintAssignable)
+	FMPShooterCharacterOnDead OnDead;
+
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	UHealthComponent* HealthComp;
 
 	virtual void Tick(float DeltaTime) override;
 
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void Respawn();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 	FString GetPlayerName() { return PlayerName; }
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerName(FString NewPlayerName) { PlayerName = NewPlayerName; }

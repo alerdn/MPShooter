@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "MPShooterPlayerController.h"
 #include "MPShooterGameMode.generated.h"
 
 UCLASS(minimalapi)
@@ -13,6 +14,10 @@ class AMPShooterGameMode : public AGameModeBase
 
 public:
 	AMPShooterGameMode();
+
+	UPROPERTY(BlueprintReadWrite)
+	TArray<AMPShooterPlayerController*> PlayerList;
+
 };
 
 

@@ -22,7 +22,15 @@ public:
 
 	void Shoot();
 
+	UFUNCTION(BlueprintPure)
+	FString GetGunName() { return GunName; }
+	UFUNCTION(BlueprintCallable)
+	void SetGunName(FString NewGunName) { GunName = NewGunName; }
+
 private:
+	UPROPERTY(EditAnywhere)
+	FString GunName;
+
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* RootComp;
 	UPROPERTY(VisibleAnywhere)

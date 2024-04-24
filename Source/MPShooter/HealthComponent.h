@@ -26,7 +26,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	float DamageTaken(AActor *DamagedActor, float Damage, AActor *DamageCauser);
+	float DamageTaken(AActor *DamagedActor, float Damage, AController* KillerController, AActor *Weapon);
 	
 	UFUNCTION(BlueprintPure)
 	bool IsDead() const;

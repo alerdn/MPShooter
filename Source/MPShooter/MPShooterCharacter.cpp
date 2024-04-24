@@ -253,11 +253,11 @@ void AMPShooterCharacter::HandleAim(float DeltaTime)
 	CameraBoom->TargetArmLength = ArmLength;
 }
 
-float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const &DamageEvent, class AController *EventInstigator, AActor *DamageCauser)
+float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const &DamageEvent, AController *EventInstigator, AActor *DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	return HealthComp->DamageTaken(this, DamageAmount, DamageCauser);
+	return HealthComp->DamageTaken(this, DamageAmount, EventInstigator, DamageCauser);
 }
 
 void AMPShooterCharacter::ClientRPCEnableInputs_Implementation()
