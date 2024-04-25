@@ -12,7 +12,7 @@ class AGun;
 class UHealthComponent;
 class UInputAction;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMPShooterCharacterOnDead, AMPShooterCharacter*, Killer, AGun*, Weapon);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FMPShooterCharacterOnDead, AMPShooterCharacter*, Player, AMPShooterCharacter*, Killer, AGun*, Weapon);
 
 UCLASS(config=Game)
 class AMPShooterCharacter : public ACharacter

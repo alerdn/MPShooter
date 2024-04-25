@@ -53,10 +53,8 @@ float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AControl
 		AGun* Gun = Cast<AGun>(Weapon);
 		if (MyOwner->HasAuthority())
 		{
-			MyOwner->ClientRPCDisableInputs();
-			MyOwner->OnDead.Broadcast(Killer, Gun);
+			MyOwner->OnDead.Broadcast(MyOwner, Killer, Gun);
 		}
-		MyOwner->GetWorldTimerManager().SetTimer(ReviveTimer, this, &UHealthComponent::Revive, 5.f);
 	}
 
 	return DamageToApply;

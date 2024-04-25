@@ -74,8 +74,6 @@ void AMPShooterCharacter::BeginPlay()
 	// Call the base class
 	Super::BeginPlay();
 
-	Respawn();
-
 	// Add Input Mapping Context
 	if (APlayerController *PlayerController = Cast<APlayerController>(Controller))
 	{
