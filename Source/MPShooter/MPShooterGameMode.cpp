@@ -3,6 +3,7 @@
 #include "MPShooterGameMode.h"
 #include "MPShooterCharacter.h"
 #include "UObject/ConstructorHelpers.h"
+#include "TimerManager.h"
 
 AMPShooterGameMode::AMPShooterGameMode()
 {
@@ -12,4 +13,17 @@ AMPShooterGameMode::AMPShooterGameMode()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
+}
+
+void AMPShooterGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	bUseSeamlessTravel = true;
+}
+
+void AMPShooterGameMode::ReloadLevel()
+{
+	MapPath = "/Game/Maps/StylizedEgypt/Stylized_Egypt_Demo";
+	GetWorld()->ServerTravel(MapPath);
 }
