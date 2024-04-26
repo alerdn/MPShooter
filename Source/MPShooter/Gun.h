@@ -37,11 +37,11 @@ private:
 	UArrowComponent* MuzzlePoint;
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
-	float DamageBase;
+	int32 DamageBase;
 	UPROPERTY(EditAnywhere, Category = "Combat")
-	float DamageVariation;
+	int32 DamageVariation;
 	UPROPERTY(EditAnywhere, Category = "Combat")
-	float MaxRange;
+	int32 MaxRange;
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	float FireRate;
 

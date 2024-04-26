@@ -16,9 +16,9 @@ AGun::AGun()
 	MuzzlePoint = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzlePoint"));
 	MuzzlePoint->SetupAttachment(RootComp);
 
-	DamageBase = 10.f;
-	DamageVariation = 10.f;
-	MaxRange = 1500.f;
+	DamageBase = 10;
+	DamageVariation = 10;
+	MaxRange = 1500;
 	FireRate = .1f;
 	bCanFire = true;
 }
@@ -67,7 +67,7 @@ void AGun::Shoot()
 
 			if (HitActor)
 			{
-				float Damage = DamageBase + FMath::RandRange(0.f, DamageVariation);
+				float Damage = DamageBase + FMath::RandRange(0, DamageVariation);
 				FPointDamageEvent DamageEvent(Damage, HitResult, ShotDirection, nullptr);
 				HitActor->TakeDamage(Damage, DamageEvent, Controller, this);
 			}

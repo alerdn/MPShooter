@@ -82,17 +82,9 @@ public:
 	UHealthComponent* HealthComp;
 
 	virtual void Tick(float DeltaTime) override;
-
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	void Respawn();
-
-	UFUNCTION(BlueprintPure)
-	FString GetPlayerName() { return PlayerName; }
-	UFUNCTION(BlueprintCallable)
-	void SetPlayerName(FString NewPlayerName) { PlayerName = NewPlayerName; }
-
+	
 	UFUNCTION(Client, Reliable)
 	void ClientRPCEnableInputs();
 	UFUNCTION(Client, Reliable)
@@ -104,9 +96,6 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
-	UPROPERTY(Replicated)
-	FString PlayerName;
-
 	UPROPERTY(EditAnywhere)
 	float MaxRunSpeed;
 	UPROPERTY(EditAnywhere)

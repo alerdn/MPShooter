@@ -23,7 +23,6 @@ protected:
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	float DamageTaken(AActor *DamagedActor, float Damage, AController* KillerController, AActor *Weapon);
@@ -43,9 +42,5 @@ private:
 	float MaxHealth;
 	UPROPERTY(Replicated, VisibleAnywhere)
 	float Health;
-
-	FTimerHandle ReviveTimer;
-
-	void Revive();
 
 };

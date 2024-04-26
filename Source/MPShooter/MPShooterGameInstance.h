@@ -1,14 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "MPShooterGameInstance.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class MPSHOOTER_API UMPShooterGameInstance : public UGameInstance
 {
@@ -18,7 +13,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FString GetRandomName();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 	FString GetPlayerName();
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerName(FString NewPlayerName) { PlayerName = NewPlayerName; }
@@ -41,5 +36,4 @@ private:
 		TEXT("Calvo"),
 		TEXT("Careca"),
 	};
-	
 };

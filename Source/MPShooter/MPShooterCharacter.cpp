@@ -15,7 +15,6 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "SpawnPoint.h"
-#include "MPShooterGameInstance.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterCharacter
@@ -86,12 +85,6 @@ void AMPShooterCharacter::BeginPlay()
 	Gun = GetWorld()->SpawnActor<AGun>(GunClass);
 	Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
 	Gun->SetOwner(this);
-
-	UMPShooterGameInstance* GameInstance = Cast<UMPShooterGameInstance>(GetGameInstance());
-	if (GameInstance)
-	{
-		PlayerName = GameInstance->GetPlayerName();
-	}
 }
 
 void AMPShooterCharacter::Tick(float DeltaTime)
@@ -104,22 +97,6 @@ void AMPShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AMPShooterCharacter, bAiming);
-}
-
-void AMPShooterCharacter::Respawn()
-{
-	TArray<AActor *> SpawnPoints;
-	UGameplayStatics::GetAllActorsOfClass(this, ASpawnPoint::StaticClass(), SpawnPoints);
-	if (SpawnPoints.Num() > 0)
-	{
-		int spawnIndex = FMath::RandRange(0, SpawnPoints.Num() - 1);
-		ASpawnPoint *SpawnPoint = Cast<ASpawnPoint>(SpawnPoints[spawnIndex]);
-		if (SpawnPoint)
-		{
-			FVector Variation(FMath::RandRange(0.f, 50.f), 0.f, FMath::RandRange(0.f, 50.f));
-			SetActorLocation(SpawnPoint->GetSpawnLocation() + Variation);
-		}
-	}
 }
 //////////////////////////////////////////////////////////////////////////
 // Input

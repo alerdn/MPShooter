@@ -1,6 +1,5 @@
 #include "HealthComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "TimerManager.h"
 #include "MPShooterCharacter.h"
 #include "Gun.h"
 
@@ -10,7 +9,7 @@ UHealthComponent::UHealthComponent()
 
 	SetIsReplicatedByDefault(true);
 
-	MaxHealth = 100.f,
+	MaxHealth = 100,
 	Health = MaxHealth;
 }
 
@@ -38,6 +37,7 @@ bool UHealthComponent::IsDead() const
 
 float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AController* KillerController, AActor *Weapon)
 {
+	Damage = FMath::Floor(Damage);
 	if (Damage <= 0.f || IsDead())
 	{
 		return 0.f;
@@ -58,16 +58,4 @@ float UHealthComponent::DamageTaken(AActor *DamagedActor, float Damage, AControl
 	}
 
 	return DamageToApply;
-}
-
-void UHealthComponent::Revive()
-{
-	AMPShooterCharacter *MyOwner = Cast<AMPShooterCharacter>(GetOwner());
-	if (MyOwner->HasAuthority())
-	{
-		MyOwner->ClientRPCEnableInputs();
-	}
-
-	Health = MaxHealth;
-	MyOwner->Respawn();
 }
