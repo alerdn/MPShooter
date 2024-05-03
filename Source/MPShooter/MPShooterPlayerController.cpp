@@ -35,7 +35,6 @@ void AMPShooterPlayerController::IncreaseDeaths()
 
 void AMPShooterPlayerController::OnRep_PlayerName()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, *PlayerName);
 	OnPlayerNameChanged.Broadcast();
 }
 
