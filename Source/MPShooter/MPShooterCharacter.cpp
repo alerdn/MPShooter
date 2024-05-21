@@ -82,9 +82,18 @@ void AMPShooterCharacter::BeginPlay()
 		}
 	}
 
-	Gun = GetWorld()->SpawnActor<AGun>(GunClass);
-	Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
-	Gun->SetOwner(this);
+	GetMesh()->HideBoneByName(TEXT("weapon_r"), PBO_None);
+	for (auto GunClass : GunClasses)
+	{
+		AGun *Gun = GetWorld()->SpawnActor<AGun>(GunClass);
+		Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
+		Gun->SetOwner(this);
+		Gun->Mesh->SetVisibility(false);
+		Guns.Add(Gun);
+	}
+
+	CurrentGun = Guns[0];
+	CurrentGun->Mesh->SetVisibility(true);
 }
 
 void AMPShooterCharacter::Tick(float DeltaTime)
@@ -127,6 +136,12 @@ void AMPShooterCharacter::SetupPlayerInputComponent(class UInputComponent *Playe
 		// Aim
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AMPShooterCharacter::Aim);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AMPShooterCharacter::Aim);
+
+		// Change Gun
+		EnhancedInputComponent->BindAction(ChangeGunAction, ETriggerEvent::Triggered, this, &AMPShooterCharacter::ChangeGun);
+
+		// Reload
+		EnhancedInputComponent->BindAction(ReloadAmmoAction, ETriggerEvent::Triggered, this, &AMPShooterCharacter::ReloadAmmo);
 	}
 }
 
@@ -170,7 +185,7 @@ void AMPShooterCharacter::Shoot()
 {
 	if (HasAuthority())
 	{
-		Gun->Shoot();
+		CurrentGun->Shoot();
 	}
 	else
 	{
@@ -180,7 +195,7 @@ void AMPShooterCharacter::Shoot()
 
 void AMPShooterCharacter::ServerRPCShoot_Implementation()
 {
-	Gun->Shoot();
+	CurrentGun->Shoot();
 }
 
 void AMPShooterCharacter::Run(const FInputActionValue &Value)
@@ -222,10 +237,46 @@ void AMPShooterCharacter::ServerRPCHandleIsAiming_Implementation(bool IsAiming)
 
 void AMPShooterCharacter::HandleAim(float DeltaTime)
 {
-	float TargetArmLength = bAiming ? AimArmLength : OriginalArmLength;
-		
+	float TargetArmLength = OriginalArmLength;
+	float FOV = 90.f;
+	bool OwnerNoSee = false;
+	if (bAiming)
+	{
+		if (CurrentGun->HasCustomFOV())
+		{
+			FOV = CurrentGun->GetCustomFOV();
+			OwnerNoSee = true;
+		}
+		else
+		{
+			TargetArmLength = AimArmLength;
+		}
+	}
+
 	float ArmLength = FMath::FInterpConstantTo(CameraBoom->TargetArmLength, TargetArmLength, DeltaTime, AimInterpSpeed);
 	CameraBoom->TargetArmLength = ArmLength;
+	
+	// Sniper
+	FollowCamera->SetFieldOfView(FOV);
+	GetMesh()->SetOwnerNoSee(OwnerNoSee);
+	CurrentGun->Mesh->SetOwnerNoSee(OwnerNoSee);
+}
+
+void AMPShooterCharacter::ChangeGun(const FInputActionValue &Value)
+{
+	int32 GunIndex = (int32)Value.Get<float>();
+
+	if (GunIndex <= Guns.Num())
+	{
+		CurrentGun->Mesh->SetVisibility(false);
+		CurrentGun = Guns[GunIndex - 1];
+		CurrentGun->Mesh->SetVisibility(true);
+	}
+}
+
+void AMPShooterCharacter::ReloadAmmo()
+{
+	CurrentGun->Reload();
 }
 
 float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const &DamageEvent, AController *EventInstigator, AActor *DamageCauser)
@@ -233,22 +284,4 @@ float AMPShooterCharacter::TakeDamage(float DamageAmount, struct FDamageEvent co
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	return HealthComp->DamageTaken(this, DamageAmount, EventInstigator, DamageCauser);
-}
-
-void AMPShooterCharacter::ClientRPCEnableInputs_Implementation()
-{
-	APlayerController *PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
-	{
-		PlayerController->SetInputMode(FInputModeGameOnly());
-	}
-}
-
-void AMPShooterCharacter::ClientRPCDisableInputs_Implementation()
-{
-	APlayerController *PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
-	{
-		PlayerController->SetInputMode(FInputModeUIOnly());
-	}
 }

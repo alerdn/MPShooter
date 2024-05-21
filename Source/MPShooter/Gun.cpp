@@ -13,19 +13,23 @@ AGun::AGun()
 	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("RootComp"));
 	SetRootComponent(RootComp);
 
-	MuzzlePoint = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzlePoint"));
-	MuzzlePoint->SetupAttachment(RootComp);
+	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
+	Mesh->SetupAttachment(RootComp);
 
 	DamageBase = 10;
 	DamageVariation = 10;
 	MaxRange = 1500;
 	FireRate = .1f;
+	ReloadSpeed = 1.f;
 	bCanFire = true;
+	bHasCrosshair = true;
 }
 
 void AGun::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CurrentAmmo = MaxAmmo;
 }
 
 void AGun::Tick(float DeltaTime)
@@ -35,10 +39,16 @@ void AGun::Tick(float DeltaTime)
 
 void AGun::Shoot()
 {
-	if (!bCanFire)
+	if (!HasAmmo())
 	{
 		return;
 	}
+
+	if (!bCanFire || bReloading)
+	{
+		return;
+	}
+	CurrentAmmo--;
 	bCanFire = false;
 
 	AMPShooterCharacter *MyOwner = Cast<AMPShooterCharacter>(GetOwner());
@@ -97,6 +107,23 @@ void AGun::AllowFire()
 	bCanFire = true;
 }
 
+void AGun::Reload()
+{
+	if (bReloading)
+	{
+		return;
+	}
+
+	bReloading = true;
+	GetWorldTimerManager().SetTimer(ReloadDelay, this, &AGun::ReloadAmmo, ReloadSpeed);
+}
+
+void AGun::ReloadAmmo()
+{
+	bReloading = false;
+	CurrentAmmo = MaxAmmo;
+}
+
 void AGun::MulticastRPCSpawnSoundAndParticles_Implementation(FVector ImpactPoint, FVector ShotDirection)
 {
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Impact, ImpactPoint, ShotDirection.Rotation());
@@ -105,6 +132,6 @@ void AGun::MulticastRPCSpawnSoundAndParticles_Implementation(FVector ImpactPoint
 
 void AGun::MulticastRPCSpawnMuzzleSoundAndParticles_Implementation()
 {
-	UGameplayStatics::SpawnEmitterAttached(MuzzleFlash, MuzzlePoint);
-	UGameplayStatics::PlaySoundAtLocation(GetWorld(), MuzzleSound, GetActorLocation());
+	UGameplayStatics::SpawnEmitterAttached(MuzzleFlash, Mesh, TEXT("MuzzleFlash"));
+	UGameplayStatics::SpawnSoundAttached(MuzzleSound, Mesh, TEXT("MuzzleFlash"));
 }
